@@ -4,7 +4,7 @@ Django settings for Smart Civic Issue Reporting System
 
 from pathlib import Path
 import os
-
+STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 SECRET_KEY = 'django-insecure-change-this-in-production-use-env-variable'
