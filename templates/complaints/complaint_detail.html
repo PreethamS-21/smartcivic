@@ -1,0 +1,170 @@
+{% extends "partials/base.html" %}
+{% block title %}{{ complaint.complaint_id }}{% endblock %}
+
+{% block content %}
+<div class="page-wrapper">
+  <div class="d-flex align-items-center justify-content-between mb-4">
+    <div class="d-flex align-items-center gap-3">
+      <a href="{% url 'complaints:dashboard' %}" class="btn btn-civic-ghost btn-sm">
+        <i class="bi bi-arrow-left me-1"></i>Back
+      </a>
+      <div>
+        <h1 class="page-title mb-0">{{ complaint.title }}</h1>
+        <span class="complaint-id-badge mt-1 d-inline-block">{{ complaint.complaint_id }}</span>
+      </div>
+    </div>
+    <span class="status-badge status-{{ complaint.status }} status-lg">
+      {% if complaint.status == 'submitted' %}<i class="bi bi-clock me-1"></i>
+      {% elif complaint.status == 'in_progress' %}<i class="bi bi-gear me-1"></i>
+      {% elif complaint.status == 'resolved' %}<i class="bi bi-check-circle me-1"></i>
+      {% else %}<i class="bi bi-x-circle me-1"></i>{% endif %}
+      {{ complaint.status_label }}
+    </span>
+  </div>
+
+  <div class="row g-4">
+    <!-- Main Details -->
+    <div class="col-lg-8">
+      <div class="civic-card mb-4">
+        <div class="civic-card-header">
+          <h5 class="section-title mb-0"><i class="bi bi-info-circle me-2"></i>Complaint Details</h5>
+        </div>
+        <div class="civic-card-body">
+          <div class="detail-grid">
+            <div class="detail-item">
+              <span class="detail-label">Category</span>
+              {% if complaint.category %}
+                <span class="category-chip" style="--cat-color: {{ complaint.category.color }}">
+                  {{ complaint.category.name }}
+                </span>
+              {% else %}<span class="text-muted">—</span>{% endif %}
+            </div>
+            <div class="detail-item">
+              <span class="detail-label">Department</span>
+              <span>{{ complaint.department.name|default:"Not assigned" }}</span>
+            </div>
+            <div class="detail-item">
+              <span class="detail-label">Submitted On</span>
+              <span>{{ complaint.created_at|date:"M d, Y — h:i A" }}</span>
+            </div>
+            <div class="detail-item">
+              <span class="detail-label">Last Updated</span>
+              <span>{{ complaint.updated_at|date:"M d, Y — h:i A" }}</span>
+            </div>
+          </div>
+
+          <div class="mt-4">
+            <span class="detail-label">Location</span>
+            <p class="mt-1"><i class="bi bi-geo-alt text-accent me-2"></i>{{ complaint.location_text }}</p>
+          </div>
+
+          <div class="mt-3">
+            <span class="detail-label">Description</span>
+            <p class="mt-1 text-secondary" style="line-height: 1.7;">{{ complaint.description }}</p>
+          </div>
+
+          {% if complaint.admin_notes %}
+          <div class="mt-3 admin-notes-box">
+            <span class="detail-label"><i class="bi bi-sticky me-1"></i>Admin Notes</span>
+            <p class="mt-1 mb-0">{{ complaint.admin_notes }}</p>
+          </div>
+          {% endif %}
+        </div>
+      </div>
+
+      <!-- Image -->
+      {% if complaint.image %}
+      <div class="civic-card mb-4">
+        <div class="civic-card-header">
+          <h5 class="section-title mb-0"><i class="bi bi-image me-2"></i>Uploaded Photo</h5>
+        </div>
+        <div class="civic-card-body text-center">
+          <img src="{{ complaint.image.url }}" alt="Complaint photo"
+               class="img-fluid rounded-lg shadow" style="max-height: 400px;" />
+        </div>
+      </div>
+      {% endif %}
+
+      <!-- Status Timeline -->
+      <div class="civic-card">
+        <div class="civic-card-header">
+          <h5 class="section-title mb-0"><i class="bi bi-clock-history me-2"></i>Status History</h5>
+        </div>
+        <div class="civic-card-body">
+          <!-- Current status in timeline -->
+          <div class="timeline">
+            <div class="timeline-item">
+              <div class="timeline-dot dot-submitted"></div>
+              <div class="timeline-content">
+                <div class="fw-600">Complaint Submitted</div>
+                <div class="text-muted small">{{ complaint.created_at|date:"M d, Y h:i A" }}</div>
+              </div>
+            </div>
+            {% for log in logs %}
+            <div class="timeline-item">
+              <div class="timeline-dot dot-{{ log.new_status }}"></div>
+              <div class="timeline-content">
+                <div class="fw-600">Status changed to <span class="status-badge status-{{ log.new_status }}">{{ log.new_status|title }}</span></div>
+                <div class="text-muted small">{{ log.changed_at|date:"M d, Y h:i A" }}
+                  {% if log.changed_by %} — by {{ log.changed_by.get_full_name|default:log.changed_by.username }}{% endif %}
+                </div>
+                {% if log.note %}<div class="mt-1 text-secondary small">{{ log.note }}</div>{% endif %}
+              </div>
+            </div>
+            {% endfor %}
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Sidebar: QR Code -->
+    <div class="col-lg-4">
+      <div class="civic-card mb-4">
+        <div class="civic-card-header text-center">
+          <h5 class="section-title mb-0"><i class="bi bi-qr-code me-2"></i>QR Code</h5>
+        </div>
+        <div class="civic-card-body text-center">
+          {% if complaint.qr_code %}
+            <div class="qr-wrapper mx-auto">
+              <img src="{{ complaint.qr_code.url }}" alt="QR Code" class="img-fluid" />
+            </div>
+          {% else %}
+            <div class="text-muted">QR code not available</div>
+          {% endif %}
+          <div class="complaint-id-badge mt-3 d-inline-block">{{ complaint.complaint_id }}</div>
+          <p class="text-muted small mt-2 mb-3">Scan to track this complaint</p>
+          <a href="{% url 'complaints:track_complaint' complaint.complaint_id %}"
+             class="btn btn-civic-outline btn-sm w-100" target="_blank">
+            <i class="bi bi-box-arrow-up-right me-1"></i>Public Tracking Page
+          </a>
+        </div>
+      </div>
+
+      <!-- Status Progress -->
+      <div class="civic-card">
+        <div class="civic-card-header">
+          <h5 class="section-title mb-0"><i class="bi bi-bar-chart-steps me-2"></i>Progress</h5>
+        </div>
+        <div class="civic-card-body">
+          <div class="progress-steps">
+            <div class="progress-step {% if complaint.status in 'submitted,in_progress,resolved' %}done{% endif %}">
+              <div class="ps-dot"></div>
+              <div class="ps-label">Submitted</div>
+            </div>
+            <div class="progress-connector {% if complaint.status in 'in_progress,resolved' %}active{% endif %}"></div>
+            <div class="progress-step {% if complaint.status == 'in_progress' %}active{% elif complaint.status == 'resolved' %}done{% endif %}">
+              <div class="ps-dot"></div>
+              <div class="ps-label">In Progress</div>
+            </div>
+            <div class="progress-connector {% if complaint.status == 'resolved' %}active{% endif %}"></div>
+            <div class="progress-step {% if complaint.status == 'resolved' %}done{% endif %}">
+              <div class="ps-dot"></div>
+              <div class="ps-label">Resolved</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

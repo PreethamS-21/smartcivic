@@ -1,0 +1,135 @@
+{% extends "partials/base.html" %}
+{% block title %}My Dashboard{% endblock %}
+
+{% block content %}
+<div class="page-wrapper">
+
+  <!-- Header -->
+  <div class="page-header mb-5">
+    <div class="d-flex align-items-center justify-content-between flex-wrap gap-3">
+      <div>
+        <p class="greeting-text">Good day, <strong>{{ user.first_name|default:user.username }}</strong> 👋</p>
+        <h1 class="page-title">My Civic Dashboard</h1>
+      </div>
+      <a href="{% url 'complaints:submit_complaint' %}" class="btn btn-civic-primary btn-lg">
+        <i class="bi bi-plus-circle me-2"></i>Report New Issue
+      </a>
+    </div>
+  </div>
+
+  <!-- Stats Cards -->
+  <div class="row g-4 mb-5">
+    <div class="col-sm-6 col-xl-3">
+      <div class="stat-card stat-total">
+        <div class="stat-icon"><i class="bi bi-collection"></i></div>
+        <div class="stat-info">
+          <span class="stat-value">{{ stats.total }}</span>
+          <span class="stat-label">Total Complaints</span>
+        </div>
+        <div class="stat-bg-icon"><i class="bi bi-collection"></i></div>
+      </div>
+    </div>
+    <div class="col-sm-6 col-xl-3">
+      <div class="stat-card stat-submitted">
+        <div class="stat-icon"><i class="bi bi-hourglass-split"></i></div>
+        <div class="stat-info">
+          <span class="stat-value">{{ stats.submitted }}</span>
+          <span class="stat-label">Submitted</span>
+        </div>
+        <div class="stat-bg-icon"><i class="bi bi-hourglass-split"></i></div>
+      </div>
+    </div>
+    <div class="col-sm-6 col-xl-3">
+      <div class="stat-card stat-progress">
+        <div class="stat-icon"><i class="bi bi-gear-wide-connected"></i></div>
+        <div class="stat-info">
+          <span class="stat-value">{{ stats.in_progress }}</span>
+          <span class="stat-label">In Progress</span>
+        </div>
+        <div class="stat-bg-icon"><i class="bi bi-gear-wide-connected"></i></div>
+      </div>
+    </div>
+    <div class="col-sm-6 col-xl-3">
+      <div class="stat-card stat-resolved">
+        <div class="stat-icon"><i class="bi bi-check-circle"></i></div>
+        <div class="stat-info">
+          <span class="stat-value">{{ stats.resolved }}</span>
+          <span class="stat-label">Resolved</span>
+        </div>
+        <div class="stat-bg-icon"><i class="bi bi-check-circle"></i></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Complaints Table -->
+  <div class="civic-card">
+    <div class="civic-card-header d-flex align-items-center justify-content-between">
+      <h5 class="section-title mb-0"><i class="bi bi-list-ul me-2"></i>My Complaints</h5>
+      <a href="{% url 'complaints:submit_complaint' %}" class="btn btn-sm btn-civic-outline">
+        <i class="bi bi-plus me-1"></i>New
+      </a>
+    </div>
+    <div class="civic-card-body p-0">
+      {% if all_complaints %}
+        <div class="table-responsive">
+          <table class="civic-table">
+            <thead>
+              <tr>
+                <th>Complaint ID</th>
+                <th>Title</th>
+                <th>Category</th>
+                <th>Location</th>
+                <th>Status</th>
+                <th>Date</th>
+                <th>Action</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for c in all_complaints %}
+              <tr>
+                <td>
+                  <span class="complaint-id-badge">{{ c.complaint_id }}</span>
+                </td>
+                <td class="fw-500">{{ c.title|truncatechars:40 }}</td>
+                <td>
+                  {% if c.category %}
+                    <span class="category-chip" style="--cat-color: {{ c.category.color }}">
+                      {{ c.category.name }}
+                    </span>
+                  {% else %}—{% endif %}
+                </td>
+                <td class="text-muted small">{{ c.location_text|truncatechars:35 }}</td>
+                <td>
+                  <span class="status-badge status-{{ c.status }}">
+                    {% if c.status == 'submitted' %}<i class="bi bi-clock me-1"></i>
+                    {% elif c.status == 'in_progress' %}<i class="bi bi-gear me-1"></i>
+                    {% elif c.status == 'resolved' %}<i class="bi bi-check-circle me-1"></i>
+                    {% else %}<i class="bi bi-x-circle me-1"></i>{% endif %}
+                    {{ c.status_label }}
+                  </span>
+                </td>
+                <td class="text-muted small">{{ c.created_at|date:"M d, Y" }}</td>
+                <td>
+                  <a href="{% url 'complaints:complaint_detail' c.pk %}" class="btn btn-xs btn-civic-outline">
+                    <i class="bi bi-eye me-1"></i>View
+                  </a>
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      {% else %}
+        <div class="empty-state py-5">
+          <div class="empty-icon"><i class="bi bi-inbox"></i></div>
+          <h5>No complaints yet</h5>
+          <p class="text-muted">You haven't submitted any civic complaints yet.</p>
+          <a href="{% url 'complaints:submit_complaint' %}" class="btn btn-civic-primary mt-2">
+            <i class="bi bi-plus-circle me-2"></i>Report Your First Issue
+          </a>
+        </div>
+      {% endif %}
+    </div>
+  </div>
+</div>
+{% endblock %}

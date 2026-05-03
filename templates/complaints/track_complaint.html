@@ -1,0 +1,113 @@
+{% extends "partials/base.html" %}
+{% block title %}Track {{ complaint.complaint_id }}{% endblock %}
+
+{% block content %}
+<div class="page-wrapper" style="max-width: 800px; margin: 0 auto;">
+  <div class="text-center mb-5">
+    <div class="page-icon mx-auto mb-3"><i class="bi bi-search"></i></div>
+    <h1 class="page-title">Complaint Tracker</h1>
+    <p class="page-subtitle">Real-time status of your civic complaint</p>
+  </div>
+
+  <div class="civic-card mb-4">
+    <div class="civic-card-body p-4">
+      <div class="d-flex align-items-start justify-content-between flex-wrap gap-3">
+        <div>
+          <div class="complaint-id-badge mb-2">{{ complaint.complaint_id }}</div>
+          <h3 class="fw-700 mb-1">{{ complaint.title }}</h3>
+          <p class="text-muted mb-0">
+            <i class="bi bi-geo-alt me-1"></i>{{ complaint.location_text }}
+          </p>
+        </div>
+        <span class="status-badge status-{{ complaint.status }} status-lg">
+          {% if complaint.status == 'submitted' %}<i class="bi bi-clock me-1"></i>
+          {% elif complaint.status == 'in_progress' %}<i class="bi bi-gear me-1"></i>
+          {% elif complaint.status == 'resolved' %}<i class="bi bi-check-circle me-1"></i>
+          {% else %}<i class="bi bi-x-circle me-1"></i>{% endif %}
+          {{ complaint.status_label }}
+        </span>
+      </div>
+
+      <hr class="my-4 opacity-25" />
+
+      <div class="row g-3">
+        <div class="col-sm-4">
+          <div class="detail-label">Category</div>
+          {% if complaint.category %}
+            <span class="category-chip mt-1" style="--cat-color: {{ complaint.category.color }}">
+              {{ complaint.category.name }}
+            </span>
+          {% else %}<span>—</span>{% endif %}
+        </div>
+        <div class="col-sm-4">
+          <div class="detail-label">Assigned To</div>
+          <div class="mt-1">{{ complaint.department.name|default:"Pending assignment" }}</div>
+        </div>
+        <div class="col-sm-4">
+          <div class="detail-label">Submitted</div>
+          <div class="mt-1">{{ complaint.created_at|date:"M d, Y" }}</div>
+        </div>
+      </div>
+
+      <!-- Progress bar -->
+      <div class="mt-4">
+        <div class="progress-steps">
+          <div class="progress-step done">
+            <div class="ps-dot"></div>
+            <div class="ps-label">Submitted</div>
+          </div>
+          <div class="progress-connector {% if complaint.status in 'in_progress,resolved' %}active{% endif %}"></div>
+          <div class="progress-step {% if complaint.status == 'in_progress' %}active{% elif complaint.status == 'resolved' %}done{% endif %}">
+            <div class="ps-dot"></div>
+            <div class="ps-label">In Progress</div>
+          </div>
+          <div class="progress-connector {% if complaint.status == 'resolved' %}active{% endif %}"></div>
+          <div class="progress-step {% if complaint.status == 'resolved' %}done{% endif %}">
+            <div class="ps-dot"></div>
+            <div class="ps-label">Resolved</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Timeline -->
+  {% if logs %}
+  <div class="civic-card mb-4">
+    <div class="civic-card-header">
+      <h5 class="section-title mb-0"><i class="bi bi-clock-history me-2"></i>Update History</h5>
+    </div>
+    <div class="civic-card-body">
+      <div class="timeline">
+        <div class="timeline-item">
+          <div class="timeline-dot dot-submitted"></div>
+          <div class="timeline-content">
+            <div class="fw-600">Complaint received</div>
+            <div class="text-muted small">{{ complaint.created_at|date:"M d, Y h:i A" }}</div>
+          </div>
+        </div>
+        {% for log in logs %}
+        <div class="timeline-item">
+          <div class="timeline-dot dot-{{ log.new_status }}"></div>
+          <div class="timeline-content">
+            <div class="fw-600">Status: <span class="status-badge status-{{ log.new_status }}">{{ log.new_status|title }}</span></div>
+            <div class="text-muted small">{{ log.changed_at|date:"M d, Y h:i A" }}</div>
+            {% if log.note %}<div class="text-secondary small mt-1">{{ log.note }}</div>{% endif %}
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+  {% endif %}
+
+  <div class="text-center">
+    <a href="{% url 'users:login' %}" class="btn btn-civic-primary me-2">
+      <i class="bi bi-box-arrow-in-right me-1"></i>Login to View Details
+    </a>
+    <a href="{% url 'users:register' %}" class="btn btn-civic-outline">
+      <i class="bi bi-person-plus me-1"></i>Create Account
+    </a>
+  </div>
+</div>
+{% endblock %}

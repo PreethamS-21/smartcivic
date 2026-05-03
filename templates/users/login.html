@@ -1,0 +1,119 @@
+{% extends "partials/base.html" %}
+{% load static %}
+
+{% block title %}Login{% endblock %}
+
+{% block content %}
+<div class="auth-wrapper">
+  <!-- Left panel -->
+  <div class="auth-hero d-none d-lg-flex">
+    <div class="auth-hero-content">
+      <div class="hero-badge mb-4">
+        <i class="bi bi-shield-check me-2"></i>Secure Portal
+      </div>
+      <h1 class="hero-heading">Report. Track.<br>Resolve.</h1>
+      <p class="hero-subtext">
+        Join thousands of citizens building smarter, cleaner communities.
+        Submit civic issues and watch them get resolved.
+      </p>
+      <div class="hero-stats mt-5">
+        <div class="hero-stat">
+          <span class="stat-number">12,400+</span>
+          <span class="stat-label">Issues Resolved</span>
+        </div>
+        <div class="hero-stat">
+          <span class="stat-number">98%</span>
+          <span class="stat-label">Response Rate</span>
+        </div>
+        <div class="hero-stat">
+          <span class="stat-number">50+</span>
+          <span class="stat-label">Departments</span>
+        </div>
+      </div>
+    </div>
+    <div class="hero-map-bg"></div>
+  </div>
+
+  <!-- Right panel — form -->
+  <div class="auth-form-panel">
+    <div class="auth-form-card">
+      <div class="text-center mb-5">
+        <div class="auth-logo">
+          <i class="bi bi-geo-alt-fill"></i>
+        </div>
+        <h2 class="auth-title">Welcome back</h2>
+        <p class="auth-subtitle">Sign in to your SmartCivic account</p>
+      </div>
+
+      <form method="post" novalidate>
+        {% csrf_token %}
+
+        <div class="mb-4">
+          <label class="form-label-civic">Username</label>
+          <div class="input-group-civic">
+            <span class="input-icon"><i class="bi bi-person"></i></span>
+            {{ form.username }}
+          </div>
+          {% if form.username.errors %}
+            <div class="field-error">{{ form.username.errors.0 }}</div>
+          {% endif %}
+        </div>
+
+        <div class="mb-4">
+          <label class="form-label-civic">Password</label>
+          <div class="input-group-civic">
+            <span class="input-icon"><i class="bi bi-lock"></i></span>
+            {{ form.password }}
+            <button type="button" class="toggle-password" onclick="togglePassword(this)">
+              <i class="bi bi-eye"></i>
+            </button>
+          </div>
+          {% if form.password.errors %}
+            <div class="field-error">{{ form.password.errors.0 }}</div>
+          {% endif %}
+        </div>
+
+        {% if form.non_field_errors %}
+          <div class="alert civic-alert-error mb-4">
+            <i class="bi bi-exclamation-triangle me-2"></i>
+            {{ form.non_field_errors.0 }}
+          </div>
+        {% endif %}
+
+        <button type="submit" class="btn btn-civic-primary w-100 mb-4">
+          <i class="bi bi-box-arrow-in-right me-2"></i>Sign In
+        </button>
+
+        <div class="text-center">
+          <span class="text-muted">Don't have an account?</span>
+          <a href="{% url 'users:register' %}" class="auth-link ms-1">Create one →</a>
+        </div>
+
+        <div class="divider-civic my-4">
+          <span>or</span>
+        </div>
+
+        <div class="text-center">
+          <a href="{% url 'complaints:track_complaint' 'CIVXXXXX' %}" class="btn btn-outline-secondary btn-sm">
+            <i class="bi bi-qr-code me-1"></i>Track a complaint without login
+          </a>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<script>
+function togglePassword(btn) {
+  const input = btn.closest('.input-group-civic').querySelector('input');
+  const icon  = btn.querySelector('i');
+  if (input.type === 'password') {
+    input.type = 'text';
+    icon.className = 'bi bi-eye-slash';
+  } else {
+    input.type = 'password';
+    icon.className = 'bi bi-eye';
+  }
+}
+</script>
+{% endblock %}

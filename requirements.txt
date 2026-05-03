@@ -1,0 +1,6 @@
+Django>=4.2,<5.0
+Pillow>=10.0
+qrcode[pil]>=7.4
+crispy-bootstrap5>=2023.10
+django-crispy-forms>=2.1
+mysqlclient>=2.2.0        # optional — only needed for MySQL

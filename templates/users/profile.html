@@ -1,0 +1,81 @@
+{% extends "partials/base.html" %}
+{% block title %}My Profile{% endblock %}
+
+{% block content %}
+<div class="page-wrapper">
+  <div class="page-header mb-4">
+    <div class="d-flex align-items-center gap-3">
+      <div class="page-icon"><i class="bi bi-person-circle"></i></div>
+      <div>
+        <h1 class="page-title">My Profile</h1>
+        <p class="page-subtitle">Manage your account information</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="row g-4">
+    <div class="col-lg-4">
+      <div class="civic-card text-center p-4">
+        <div class="profile-avatar mx-auto mb-3">
+          {% if user.avatar %}
+            <img src="{{ user.avatar.url }}" alt="Avatar" class="rounded-circle w-100 h-100 object-fit-cover"/>
+          {% else %}
+            <div class="avatar-placeholder">
+              <i class="bi bi-person-fill fs-1 text-white"></i>
+            </div>
+          {% endif %}
+        </div>
+        <h4 class="fw-700 mb-1">{{ user.get_full_name|default:user.username }}</h4>
+        <span class="badge {% if user.is_civic_admin %}badge-admin{% else %}badge-citizen{% endif %} mb-3">
+          {{ user.get_role_display|default:"Citizen" }}
+        </span>
+        <div class="profile-info-list text-start mt-3">
+          <div class="profile-info-item">
+            <i class="bi bi-envelope text-muted me-2"></i>{{ user.email|default:"—" }}
+          </div>
+          <div class="profile-info-item">
+            <i class="bi bi-telephone text-muted me-2"></i>{{ user.phone|default:"—" }}
+          </div>
+          <div class="profile-info-item">
+            <i class="bi bi-calendar3 text-muted me-2"></i>Joined {{ user.date_joined|date:"M d, Y" }}
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-lg-8">
+      <div class="civic-card p-4">
+        <h5 class="section-title mb-4"><i class="bi bi-pencil-square me-2"></i>Update Information</h5>
+        <form method="post" enctype="multipart/form-data">
+          {% csrf_token %}
+          <div class="row g-3">
+            <div class="col-6">
+              <label class="form-label-civic">First Name</label>
+              {{ form.first_name }}
+            </div>
+            <div class="col-6">
+              <label class="form-label-civic">Last Name</label>
+              {{ form.last_name }}
+            </div>
+            <div class="col-12">
+              <label class="form-label-civic">Email</label>
+              {{ form.email }}
+            </div>
+            <div class="col-12">
+              <label class="form-label-civic">Phone</label>
+              {{ form.phone }}
+            </div>
+            <div class="col-12">
+              <label class="form-label-civic">Profile Photo</label>
+              {{ form.avatar }}
+            </div>
+          </div>
+          <button type="submit" class="btn btn-civic-primary mt-4">
+            <i class="bi bi-save me-2"></i>Save Changes
+          </button>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

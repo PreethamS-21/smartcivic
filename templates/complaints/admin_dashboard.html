@@ -1,0 +1,191 @@
+{% extends "partials/base.html" %}
+{% block title %}Admin Dashboard{% endblock %}
+
+{% block content %}
+<div class="page-wrapper">
+
+  <div class="page-header mb-5">
+    <div class="d-flex align-items-center justify-content-between flex-wrap gap-3">
+      <div>
+        <p class="greeting-text">Admin Panel <span class="badge-admin-pill">Administrator</span></p>
+        <h1 class="page-title">Civic Operations Dashboard</h1>
+      </div>
+      <a href="{% url 'complaints:admin_complaint_list' %}" class="btn btn-civic-primary">
+        <i class="bi bi-list-check me-2"></i>Manage All Complaints
+      </a>
+    </div>
+  </div>
+
+  <!-- Stats Row -->
+  <div class="row g-4 mb-5">
+    <div class="col-6 col-xl-3">
+      <div class="stat-card stat-total">
+        <div class="stat-icon"><i class="bi bi-collection"></i></div>
+        <div class="stat-info">
+          <span class="stat-value">{{ stats.total }}</span>
+          <span class="stat-label">Total Issues</span>
+        </div>
+        <div class="stat-bg-icon"><i class="bi bi-collection"></i></div>
+      </div>
+    </div>
+    <div class="col-6 col-xl-3">
+      <div class="stat-card stat-submitted">
+        <div class="stat-icon"><i class="bi bi-inbox"></i></div>
+        <div class="stat-info">
+          <span class="stat-value">{{ stats.submitted }}</span>
+          <span class="stat-label">Pending</span>
+        </div>
+        <div class="stat-bg-icon"><i class="bi bi-inbox"></i></div>
+      </div>
+    </div>
+    <div class="col-6 col-xl-3">
+      <div class="stat-card stat-progress">
+        <div class="stat-icon"><i class="bi bi-gear-wide-connected"></i></div>
+        <div class="stat-info">
+          <span class="stat-value">{{ stats.in_progress }}</span>
+          <span class="stat-label">In Progress</span>
+        </div>
+        <div class="stat-bg-icon"><i class="bi bi-gear-wide-connected"></i></div>
+      </div>
+    </div>
+    <div class="col-6 col-xl-3">
+      <div class="stat-card stat-resolved">
+        <div class="stat-icon"><i class="bi bi-check-circle"></i></div>
+        <div class="stat-info">
+          <span class="stat-value">{{ stats.resolved }}</span>
+          <span class="stat-label">Resolved</span>
+        </div>
+        <div class="stat-bg-icon"><i class="bi bi-check-circle"></i></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Charts Row -->
+  <div class="row g-4 mb-5">
+    <div class="col-lg-5">
+      <div class="civic-card h-100">
+        <div class="civic-card-header">
+          <h5 class="section-title mb-0"><i class="bi bi-pie-chart me-2"></i>Issues by Category</h5>
+        </div>
+        <div class="civic-card-body d-flex align-items-center justify-content-center">
+          <div style="position:relative; height:260px; width:260px;">
+            <canvas id="categoryChart"></canvas>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="col-lg-7">
+      <div class="civic-card h-100">
+        <div class="civic-card-header">
+          <h5 class="section-title mb-0"><i class="bi bi-bar-chart me-2"></i>Status Overview</h5>
+        </div>
+        <div class="civic-card-body">
+          <canvas id="statusChart" style="height:260px;"></canvas>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Recent Complaints -->
+  <div class="civic-card">
+    <div class="civic-card-header d-flex align-items-center justify-content-between">
+      <h5 class="section-title mb-0"><i class="bi bi-clock-history me-2"></i>Recent Complaints</h5>
+      <a href="{% url 'complaints:admin_complaint_list' %}" class="btn btn-sm btn-civic-outline">View All</a>
+    </div>
+    <div class="civic-card-body p-0">
+      <div class="table-responsive">
+        <table class="civic-table">
+          <thead>
+            <tr>
+              <th>ID</th><th>Title</th><th>Citizen</th><th>Category</th><th>Status</th><th>Date</th><th>Action</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for c in recent_complaints %}
+            <tr>
+              <td><span class="complaint-id-badge">{{ c.complaint_id }}</span></td>
+              <td class="fw-500">{{ c.title|truncatechars:35 }}</td>
+              <td>
+                <div class="user-cell">
+                  <div class="user-avatar-xs">{{ c.user.first_name.0|default:c.user.username.0|upper }}</div>
+                  {{ c.user.get_full_name|default:c.user.username }}
+                </div>
+              </td>
+              <td>
+                {% if c.category %}
+                  <span class="category-chip" style="--cat-color: {{ c.category.color }}">{{ c.category.name }}</span>
+                {% else %}—{% endif %}
+              </td>
+              <td>
+                <span class="status-badge status-{{ c.status }}">
+                  {% if c.status == 'submitted' %}<i class="bi bi-clock me-1"></i>
+                  {% elif c.status == 'in_progress' %}<i class="bi bi-gear me-1"></i>
+                  {% elif c.status == 'resolved' %}<i class="bi bi-check-circle me-1"></i>
+                  {% else %}<i class="bi bi-x-circle me-1"></i>{% endif %}
+                  {{ c.status_label }}
+                </span>
+              </td>
+              <td class="text-muted small">{{ c.created_at|date:"M d" }}</td>
+              <td>
+                <a href="{% url 'complaints:admin_complaint_detail' c.pk %}" class="btn btn-xs btn-civic-primary">
+                  <i class="bi bi-pencil"></i>
+                </a>
+              </td>
+            </tr>
+            {% empty %}
+            <tr><td colspan="7" class="text-center text-muted py-4">No complaints yet</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+const catData = {{ by_category|safe }};
+
+// Doughnut chart
+new Chart(document.getElementById('categoryChart'), {
+  type: 'doughnut',
+  data: {
+    labels: catData.map(d => d.name),
+    datasets: [{
+      data: catData.map(d => d.count),
+      backgroundColor: catData.map(d => d.color),
+      borderWidth: 0,
+      hoverOffset: 8,
+    }]
+  },
+  options: {
+    responsive: true, maintainAspectRatio: false,
+    plugins: { legend: { position: 'bottom', labels: { color: '#94a3b8', padding: 12, font: { family: 'Sora' } } } }
+  }
+});
+
+// Bar chart
+new Chart(document.getElementById('statusChart'), {
+  type: 'bar',
+  data: {
+    labels: ['Submitted', 'In Progress', 'Resolved', 'Rejected'],
+    datasets: [{
+      label: 'Complaints',
+      data: [{{ stats.submitted }}, {{ stats.in_progress }}, {{ stats.resolved }}, {{ stats.rejected }}],
+      backgroundColor: ['#f59e0b', '#38bdf8', '#22c55e', '#ef4444'],
+      borderRadius: 8,
+      barThickness: 40,
+    }]
+  },
+  options: {
+    responsive: true, maintainAspectRatio: false,
+    scales: {
+      x: { grid: { display: false }, ticks: { color: '#94a3b8', font: { family: 'Sora' } } },
+      y: { grid: { color: 'rgba(148,163,184,0.1)' }, ticks: { color: '#94a3b8', font: { family: 'Sora' }, precision: 0 } }
+    },
+    plugins: { legend: { display: false } }
+  }
+});
+</script>
+{% endblock %}

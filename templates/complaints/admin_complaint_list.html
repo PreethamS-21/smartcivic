@@ -1,0 +1,127 @@
+{% extends "partials/base.html" %}
+{% block title %}All Complaints{% endblock %}
+
+{% block content %}
+<div class="page-wrapper">
+  <div class="page-header mb-4">
+    <div class="d-flex align-items-center justify-content-between flex-wrap gap-3">
+      <div class="d-flex align-items-center gap-3">
+        <div class="page-icon"><i class="bi bi-list-check"></i></div>
+        <div>
+          <h1 class="page-title">All Complaints</h1>
+          <p class="page-subtitle">{{ complaints|length }} total records</p>
+        </div>
+      </div>
+      <a href="{% url 'complaints:admin_dashboard' %}" class="btn btn-civic-ghost btn-sm">
+        <i class="bi bi-speedometer2 me-1"></i>Dashboard
+      </a>
+    </div>
+  </div>
+
+  <!-- Filter Bar -->
+  <div class="civic-card mb-4">
+    <div class="civic-card-body">
+      <form method="get" class="row g-2 align-items-end">
+        <div class="col-md-4">
+          <label class="form-label-civic small mb-1">Search</label>
+          {{ filter_form.search }}
+        </div>
+        <div class="col-md-3">
+          <label class="form-label-civic small mb-1">Category</label>
+          {{ filter_form.category }}
+        </div>
+        <div class="col-md-3">
+          <label class="form-label-civic small mb-1">Status</label>
+          {{ filter_form.status }}
+        </div>
+        <div class="col-md-2 d-flex gap-2">
+          <button type="submit" class="btn btn-civic-primary btn-sm flex-grow-1">
+            <i class="bi bi-funnel me-1"></i>Filter
+          </button>
+          <a href="{% url 'complaints:admin_complaint_list' %}" class="btn btn-civic-ghost btn-sm">
+            <i class="bi bi-x"></i>
+          </a>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Complaints Table -->
+  <div class="civic-card">
+    <div class="civic-card-body p-0">
+      <div class="table-responsive">
+        <table class="civic-table">
+          <thead>
+            <tr>
+              <th>ID</th>
+              <th>Title</th>
+              <th>Citizen</th>
+              <th>Category</th>
+              <th>Location</th>
+              <th>Department</th>
+              <th>Status</th>
+              <th>Date</th>
+              <th>Action</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for c in complaints %}
+            <tr>
+              <td><span class="complaint-id-badge">{{ c.complaint_id }}</span></td>
+              <td>
+                <div class="fw-500">{{ c.title|truncatechars:35 }}</div>
+                {% if c.image %}
+                  <span class="text-muted" style="font-size:10px;"><i class="bi bi-image me-1"></i>Has photo</span>
+                {% endif %}
+              </td>
+              <td>
+                <div class="user-cell">
+                  <div class="user-avatar-xs">{{ c.user.first_name.0|default:c.user.username.0|upper }}</div>
+                  <div>
+                    <div class="small fw-500">{{ c.user.get_full_name|default:c.user.username }}</div>
+                    <div class="text-muted" style="font-size:10px;">{{ c.user.email }}</div>
+                  </div>
+                </div>
+              </td>
+              <td>
+                {% if c.category %}
+                  <span class="category-chip" style="--cat-color: {{ c.category.color }}">{{ c.category.name }}</span>
+                {% else %}—{% endif %}
+              </td>
+              <td class="text-muted small">{{ c.location_text|truncatechars:30 }}</td>
+              <td class="text-muted small">{{ c.department.name|default:"Unassigned" }}</td>
+              <td>
+                <span class="status-badge status-{{ c.status }}">
+                  {% if c.status == 'submitted' %}<i class="bi bi-clock me-1"></i>
+                  {% elif c.status == 'in_progress' %}<i class="bi bi-gear me-1"></i>
+                  {% elif c.status == 'resolved' %}<i class="bi bi-check-circle me-1"></i>
+                  {% else %}<i class="bi bi-x-circle me-1"></i>{% endif %}
+                  {{ c.status_label }}
+                </span>
+              </td>
+              <td class="text-muted small">{{ c.created_at|date:"M d, Y" }}</td>
+              <td>
+                <a href="{% url 'complaints:admin_complaint_detail' c.pk %}"
+                   class="btn btn-xs btn-civic-primary" title="Manage">
+                  <i class="bi bi-pencil-square"></i>
+                </a>
+              </td>
+            </tr>
+            {% empty %}
+            <tr>
+              <td colspan="9">
+                <div class="empty-state py-5">
+                  <div class="empty-icon"><i class="bi bi-inbox"></i></div>
+                  <h6>No complaints match your filters</h6>
+                  <a href="{% url 'complaints:admin_complaint_list' %}" class="btn btn-sm btn-civic-outline mt-2">Clear filters</a>
+                </div>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

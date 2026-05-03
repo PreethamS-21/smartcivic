@@ -1,0 +1,325 @@
+{% extends "partials/base.html" %}
+{% block title %}Report Civic Issue{% endblock %}
+
+{% block extra_css %}
+<!-- Leaflet CSS -->
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<style>
+  #map { height: 350px; border-radius: 12px; overflow: hidden; border: 2px solid var(--border); }
+  .leaflet-container { background: #1a1a2e; }
+  .category-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+  .cat-option { display: none; }
+  .cat-label {
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    padding: 14px 8px; border: 2px solid var(--border); border-radius: 12px;
+    cursor: pointer; transition: all 0.2s; text-align: center; font-size: 13px; font-weight: 500;
+    gap: 6px; background: var(--card-bg);
+  }
+  .cat-label .cat-icon { font-size: 24px; }
+  .cat-option:checked + .cat-label { border-color: var(--accent); background: rgba(99,102,241,0.1); color: var(--accent); }
+  .cat-label:hover { border-color: var(--accent); transform: translateY(-2px); }
+  .image-drop-zone {
+    border: 2px dashed var(--border); border-radius: 12px;
+    padding: 40px 20px; text-align: center; cursor: pointer;
+    transition: border-color 0.2s; background: var(--card-bg);
+  }
+  .image-drop-zone:hover, .image-drop-zone.dragover { border-color: var(--accent); }
+  .image-preview-wrap { position: relative; display: inline-block; }
+  .image-preview-wrap img { max-height: 200px; border-radius: 8px; }
+  .remove-img { position: absolute; top: -8px; right: -8px; background: #ef4444; color: white;
+    border: none; border-radius: 50%; width: 24px; height: 24px; font-size: 12px; cursor: pointer; }
+  .step-indicator { display: flex; gap: 0; margin-bottom: 32px; }
+  .step { flex: 1; text-align: center; position: relative; }
+  .step::after { content: ''; position: absolute; top: 18px; left: 50%; width: 100%; height: 2px;
+    background: var(--border); z-index: 0; }
+  .step:last-child::after { display: none; }
+  .step-dot { width: 36px; height: 36px; border-radius: 50%; display: inline-flex; align-items: center;
+    justify-content: center; font-weight: 700; font-size: 14px; position: relative; z-index: 1;
+    border: 2px solid var(--border); background: var(--card-bg); color: var(--text-muted); }
+  .step.active .step-dot { background: var(--accent); border-color: var(--accent); color: white; }
+  .step.done .step-dot { background: #22c55e; border-color: #22c55e; color: white; }
+  .step-label { font-size: 11px; color: var(--text-muted); margin-top: 4px; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="page-wrapper">
+  <div class="page-header mb-4">
+    <div class="d-flex align-items-center gap-3">
+      <div class="page-icon"><i class="bi bi-megaphone"></i></div>
+      <div>
+        <h1 class="page-title">Report Civic Issue</h1>
+        <p class="page-subtitle">Help improve your community by reporting local problems</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="row g-4">
+    <!-- Main Form -->
+    <div class="col-lg-8">
+      <form method="post" enctype="multipart/form-data" id="complaintForm">
+        {% csrf_token %}
+        {{ form.latitude }}
+        {{ form.longitude }}
+
+        <!-- Step 1: Issue Details -->
+        <div class="civic-card mb-4">
+          <div class="civic-card-header">
+            <h5 class="section-title mb-0">
+              <span class="step-num">1</span> Issue Details
+            </h5>
+          </div>
+          <div class="civic-card-body">
+            <div class="mb-4">
+              <label class="form-label-civic">Issue Title <span class="text-danger">*</span></label>
+              {{ form.title }}
+              {% if form.title.errors %}<div class="field-error">{{ form.title.errors.0 }}</div>{% endif %}
+            </div>
+            <div class="mb-4">
+              <label class="form-label-civic">Description <span class="text-danger">*</span></label>
+              {{ form.description }}
+              {% if form.description.errors %}<div class="field-error">{{ form.description.errors.0 }}</div>{% endif %}
+            </div>
+          </div>
+        </div>
+
+        <!-- Step 2: Category -->
+        <div class="civic-card mb-4">
+          <div class="civic-card-header">
+            <h5 class="section-title mb-0">
+              <span class="step-num">2</span> Category <span class="text-danger">*</span>
+            </h5>
+          </div>
+          <div class="civic-card-body">
+            <div class="category-grid">
+              {% for cat in categories %}
+              <div>
+                <input type="radio" name="category" value="{{ cat.pk }}"
+                       id="cat_{{ cat.pk }}" class="cat-option"
+                       {% if form.category.value == cat.pk|stringformat:'s' %}checked{% endif %} />
+                <label class="cat-label" for="cat_{{ cat.pk }}" style="--cat: {{ cat.color }}">
+                  <span class="cat-icon">
+                    {% if cat.icon == 'trash' %}🗑️
+                    {% elif cat.icon == 'road' %}🕳️
+                    {% elif cat.icon == 'lightbulb' %}💡
+                    {% elif cat.icon == 'droplet' %}💧
+                    {% elif cat.icon == 'water' %}🌊
+                    {% else %}🔧{% endif %}
+                  </span>
+                  {{ cat.name }}
+                </label>
+              </div>
+              {% endfor %}
+            </div>
+            {% if form.category.errors %}<div class="field-error mt-2">{{ form.category.errors.0 }}</div>{% endif %}
+          </div>
+        </div>
+
+        <!-- Step 3: Location -->
+        <div class="civic-card mb-4">
+          <div class="civic-card-header d-flex align-items-center justify-content-between">
+            <h5 class="section-title mb-0">
+              <span class="step-num">3</span> Location <span class="text-danger">*</span>
+            </h5>
+            <button type="button" class="btn btn-sm btn-civic-outline" onclick="useMyLocation()">
+              <i class="bi bi-crosshair me-1"></i>Use My Location
+            </button>
+          </div>
+          <div class="civic-card-body">
+            <div class="mb-3">
+              <label class="form-label-civic">Address</label>
+              {{ form.location_text }}
+            </div>
+            <div id="map" class="mb-2"></div>
+            <p class="text-muted small mb-0">
+              <i class="bi bi-info-circle me-1"></i>
+              Click on the map to pin the exact location of the issue.
+            </p>
+          </div>
+        </div>
+
+        <!-- Step 4: Image -->
+        <div class="civic-card mb-4">
+          <div class="civic-card-header">
+            <h5 class="section-title mb-0">
+              <span class="step-num">4</span> Upload Image <span class="text-muted small fw-400">(optional)</span>
+            </h5>
+          </div>
+          <div class="civic-card-body">
+            <div class="image-drop-zone" id="dropZone" onclick="document.getElementById('imageInput').click()">
+              <div id="dropContent">
+                <i class="bi bi-cloud-upload fs-2 text-muted d-block mb-2"></i>
+                <p class="mb-1 fw-500">Drag & drop or click to upload</p>
+                <p class="text-muted small mb-0">PNG, JPG, WEBP up to 10MB</p>
+              </div>
+              <div id="previewWrap" class="image-preview-wrap d-none">
+                <img id="previewImg" src="" alt="Preview" />
+                <button type="button" class="remove-img" onclick="removeImage(event)">✕</button>
+              </div>
+            </div>
+            <input type="file" id="imageInput" name="image" accept="image/*" class="d-none" onchange="previewImage(event)" />
+          </div>
+        </div>
+
+        <!-- Submit -->
+        <div class="d-flex gap-3 justify-content-end">
+          <a href="{% url 'complaints:dashboard' %}" class="btn btn-civic-ghost">Cancel</a>
+          <button type="submit" class="btn btn-civic-primary btn-lg">
+            <i class="bi bi-send me-2"></i>Submit Complaint
+          </button>
+        </div>
+      </form>
+    </div>
+
+    <!-- Sidebar -->
+    <div class="col-lg-4">
+      <div class="civic-card mb-4 sticky-top" style="top: 80px;">
+        <div class="civic-card-header">
+          <h6 class="section-title mb-0"><i class="bi bi-lightbulb me-2"></i>Tips for Good Reports</h6>
+        </div>
+        <div class="civic-card-body">
+          <div class="tip-list">
+            <div class="tip-item">
+              <i class="bi bi-camera text-accent me-2"></i>
+              <span>Attach a clear photo of the issue</span>
+            </div>
+            <div class="tip-item">
+              <i class="bi bi-geo-alt text-accent me-2"></i>
+              <span>Pin the exact spot on the map</span>
+            </div>
+            <div class="tip-item">
+              <i class="bi bi-text-paragraph text-accent me-2"></i>
+              <span>Describe the problem clearly</span>
+            </div>
+            <div class="tip-item">
+              <i class="bi bi-tag text-accent me-2"></i>
+              <span>Choose the right category</span>
+            </div>
+          </div>
+
+          <div class="divider-civic my-3"><span>After submission</span></div>
+
+          <div class="status-flow">
+            <div class="flow-step">
+              <div class="flow-dot flow-submitted"></div>
+              <div>
+                <div class="fw-600 small">Submitted</div>
+                <div class="text-muted" style="font-size:11px">Your report is received</div>
+              </div>
+            </div>
+            <div class="flow-line"></div>
+            <div class="flow-step">
+              <div class="flow-dot flow-progress"></div>
+              <div>
+                <div class="fw-600 small">In Progress</div>
+                <div class="text-muted" style="font-size:11px">Department is working on it</div>
+              </div>
+            </div>
+            <div class="flow-line"></div>
+            <div class="flow-step">
+              <div class="flow-dot flow-resolved"></div>
+              <div>
+                <div class="fw-600 small">Resolved</div>
+                <div class="text-muted" style="font-size:11px">Issue has been fixed</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<!-- Leaflet JS -->
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+  // ── Leaflet / OpenStreetMap map ──────────────────────────────────────────
+  const map = L.map('map', { zoomControl: true }).setView([20.5937, 78.9629], 5);
+
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+    maxZoom: 19
+  }).addTo(map);
+
+  let marker = null;
+
+  // Custom marker icon (works without external asset)
+  const pinIcon = L.divIcon({
+    html: `<div style="
+      width:28px;height:28px;border-radius:50% 50% 50% 0;
+      background:#6366f1;border:3px solid #fff;
+      transform:rotate(-45deg);box-shadow:0 2px 8px rgba(0,0,0,.4);
+    "></div>`,
+    iconSize: [28, 28],
+    iconAnchor: [14, 28],
+    className: ''
+  });
+
+  function placeMarker(latlng) {
+    if (marker) map.removeLayer(marker);
+    marker = L.marker(latlng, { icon: pinIcon }).addTo(map);
+    document.getElementById('id_latitude').value  = latlng.lat.toFixed(6);
+    document.getElementById('id_longitude').value = latlng.lng.toFixed(6);
+
+    // Reverse geocode via Nominatim (free, no key needed)
+    fetch(`https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${latlng.lat}&lon=${latlng.lng}`)
+      .then(r => r.json())
+      .then(data => {
+        if (data && data.display_name) {
+          const field = document.getElementById('id_location_text');
+          if (field) field.value = data.display_name;
+        }
+      })
+      .catch(() => {});
+  }
+
+  map.on('click', e => placeMarker(e.latlng));
+
+  function useMyLocation() {
+    if (!navigator.geolocation) { alert('Geolocation not supported.'); return; }
+    navigator.geolocation.getCurrentPosition(pos => {
+      const latlng = L.latLng(pos.coords.latitude, pos.coords.longitude);
+      map.setView(latlng, 16);
+      placeMarker(latlng);
+    }, () => alert('Could not get your location.'));
+  }
+</script>
+
+<script>
+  // Image preview
+  function previewImage(e) {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      document.getElementById('previewImg').src = ev.target.result;
+      document.getElementById('dropContent').classList.add('d-none');
+      document.getElementById('previewWrap').classList.remove('d-none');
+    };
+    reader.readAsDataURL(file);
+  }
+
+  function removeImage(e) {
+    e.stopPropagation();
+    document.getElementById('imageInput').value = '';
+    document.getElementById('dropContent').classList.remove('d-none');
+    document.getElementById('previewWrap').classList.add('d-none');
+  }
+
+  // Drag-and-drop
+  const dz = document.getElementById('dropZone');
+  dz.addEventListener('dragover', e => { e.preventDefault(); dz.classList.add('dragover'); });
+  dz.addEventListener('dragleave', () => dz.classList.remove('dragover'));
+  dz.addEventListener('drop', e => {
+    e.preventDefault(); dz.classList.remove('dragover');
+    const file = e.dataTransfer.files[0];
+    if (file && file.type.startsWith('image/')) {
+      const dt = new DataTransfer(); dt.items.add(file);
+      document.getElementById('imageInput').files = dt.files;
+      previewImage({ target: { files: [file] } });
+    }
+  });
+</script>
+{% endblock %}
